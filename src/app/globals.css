@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Poppins:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  background: #0C0C0B;
+  color: #E8E6DF;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #3A3A36;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #0C0C0B; }
+::-webkit-scrollbar-thumb { background: #2A2A28; border-radius: 2px; }
