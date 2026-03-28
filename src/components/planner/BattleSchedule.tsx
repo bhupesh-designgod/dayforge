@@ -19,15 +19,15 @@ const TIER_STYLES = {
   minion: { bg: "#141413", border: "#2A2A28", accent: "#6B6A65" },
 };
 
-interface AddBlockModal {
-  hour: number;
-}
+interface AddBlockModal { hour: number }
 
 export function BattleSchedule() {
-  const { timeBlocks, addTimeBlock, removeTimeBlock } = usePlannerStore();
+  const { timeBlocks, addTimeBlock, removeTimeBlock, completeTimeBlock } = usePlannerStore();
   const [adding, setAdding] = useState<AddBlockModal | null>(null);
   const [form, setForm] = useState({ title: "", tier: "elite" as Tier, duration: 60 });
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
+
+  const currentHour = new Date().getHours();
 
   const submitAdd = () => {
     if (!form.title.trim() || !adding) return;
@@ -39,6 +39,7 @@ export function BattleSchedule() {
       title: form.title.trim(),
       tier: form.tier,
       sort_order: timeBlocks.length,
+      completed: false,
     });
     setAdding(null);
     setForm({ title: "", tier: "elite", duration: 60 });
@@ -61,13 +62,30 @@ export function BattleSchedule() {
           if (isOccupied) return null;
 
           const s = block ? TIER_STYLES[block.tier] : null;
+          const isPast = h < currentHour;
+          const isCurrent = h === currentHour;
 
           return (
             <div
               key={h}
-              style={{ display: "flex", gap: 16, minHeight: block ? Math.max(durHours * 52, 52) : 36, alignItems: "stretch" }}
+              style={{
+                display: "flex",
+                gap: 16,
+                minHeight: block ? Math.max(durHours * 52, 52) : 36,
+                alignItems: "stretch",
+                opacity: isPast && !block ? 0.35 : isPast && block ? 0.5 : 1,
+              }}
             >
-              <span style={{ fontSize: 11, fontFamily: "'Poppins', sans-serif", color: "#4A4A46", minWidth: 44, textAlign: "right", paddingTop: 8, flexShrink: 0 }}>
+              <span style={{
+                fontSize: 11,
+                fontFamily: "'Poppins', sans-serif",
+                color: isCurrent ? "#D4952B" : "#4A4A46",
+                fontWeight: isCurrent ? 600 : 400,
+                minWidth: 44,
+                textAlign: "right",
+                paddingTop: 8,
+                flexShrink: 0,
+              }}>
                 {formatHour(h)}
               </span>
 
@@ -75,8 +93,8 @@ export function BattleSchedule() {
               <div style={{ position: "relative", width: 0 }}>
                 <div style={{
                   position: "absolute", left: -3, top: 12, width: 7, height: 7, borderRadius: "50%",
-                  background: block ? s!.accent : "#2A2A28",
-                  boxShadow: block ? `0 0 8px ${s!.accent}44` : "none",
+                  background: isCurrent ? "#D4952B" : block ? s!.accent : "#2A2A28",
+                  boxShadow: isCurrent ? "0 0 8px #D4952B88" : block ? `0 0 8px ${s!.accent}44` : "none",
                 }} />
               </div>
 
@@ -87,18 +105,47 @@ export function BattleSchedule() {
               >
                 {block ? (
                   <div style={{
-                    padding: "10px 14px", background: s!.bg, border: `1px solid ${s!.border}`,
-                    borderLeft: `3px solid ${s!.accent}`, borderRadius: "0 6px 6px 0",
-                    height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative",
+                    padding: "10px 14px",
+                    background: block.completed ? "#0C0C0B" : s!.bg,
+                    border: `1px solid ${block.completed ? "#1E1E1C" : s!.border}`,
+                    borderLeft: `3px solid ${block.completed ? s!.accent + "44" : s!.accent}`,
+                    borderRadius: "0 6px 6px 0",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    position: "relative",
+                    opacity: block.completed ? 0.5 : 1,
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {/* Complete toggle */}
+                      <span
+                        onClick={() => completeTimeBlock(block.id)}
+                        title={block.completed ? "Mark incomplete" : "Mark complete"}
+                        style={{
+                          width: 14, height: 14, borderRadius: 2, flexShrink: 0, cursor: "pointer",
+                          border: block.completed ? `1.5px solid ${s!.accent}55` : `1.5px solid ${s!.accent}66`,
+                          background: block.completed ? s!.accent + "22" : "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: s!.accent, fontSize: 9, transition: "all 0.2s",
+                        }}
+                      >
+                        {block.completed ? "✓" : ""}
+                      </span>
                       <TierIcon tier={block.tier} size={12} />
-                      <span style={{ fontSize: 13, fontWeight: 500, color: block.tier === "minion" ? "#8A8983" : "#E8E6DF" }}>
+                      <span style={{
+                        fontSize: 13, fontWeight: 500,
+                        color: block.completed ? "#4A4A46" : block.tier === "minion" ? "#8A8983" : "#E8E6DF",
+                        textDecoration: block.completed ? "line-through" : "none",
+                      }}>
                         {block.title}
                       </span>
                     </div>
                     <span style={{ fontSize: 11, color: "#5A5955", marginTop: 3, fontFamily: "'Poppins', sans-serif" }}>
                       {block.duration_minutes >= 60 ? `${block.duration_minutes / 60}h` : `${block.duration_minutes}m`} block
+                      {block.quest_id && (
+                        <span style={{ color: "#3A3A36", marginLeft: 6 }}>· linked to quest</span>
+                      )}
                     </span>
                     {hoveredHour === h && (
                       <button
@@ -111,17 +158,24 @@ export function BattleSchedule() {
                   </div>
                 ) : (
                   <div
-                    onClick={() => setAdding({ hour: h })}
-                    style={{ height: "100%", display: "flex", alignItems: "center", paddingLeft: 4, cursor: "pointer" }}
+                    onClick={() => !isPast && setAdding({ hour: h })}
+                    style={{ height: "100%", display: "flex", alignItems: "center", paddingLeft: 4, cursor: isPast ? "default" : "pointer" }}
                   >
+                    {isCurrent && (
+                      <div style={{
+                        position: "absolute", left: 44, right: 0, height: 1,
+                        background: "linear-gradient(90deg, #D4952B44, transparent)",
+                        pointerEvents: "none",
+                      }} />
+                    )}
                     <span style={{
                       fontSize: 11,
-                      color: hoveredHour === h ? "#6B6A65" : "#2A2A28",
+                      color: isPast ? "#1E1E1C" : hoveredHour === h ? "#6B6A65" : isCurrent ? "#3A3A36" : "#2A2A28",
                       fontFamily: "'Poppins', sans-serif",
                       transition: "color 0.15s",
                       letterSpacing: "0.04em",
                     }}>
-                      + add encounter
+                      {isPast ? "—" : "+ add encounter"}
                     </span>
                   </div>
                 )}

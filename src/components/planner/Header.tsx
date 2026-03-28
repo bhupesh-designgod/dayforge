@@ -34,17 +34,22 @@ const navBtn: React.CSSProperties = {
 };
 
 export function Header() {
-  const { currentDate, navDay, setCurrentDate } = usePlannerStore();
+  const { currentDate, navDay, setCurrentDate, focusItems, tasks } = usePlannerStore();
   const [greeting, setGreeting] = useState(GREETINGS[0]);
   useEffect(() => {
     setGreeting(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
   }, []);
   const isToday = currentDate === todayKey();
 
+  // HP = (completed / total) * 5, clamped 0–5, defaults to 5 when nothing added yet
+  const total = focusItems.length + tasks.length;
+  const done  = focusItems.filter((f) => f.completed).length + tasks.filter((t) => t.completed).length;
+  const hp    = total === 0 ? 5 : Math.min(5, Math.round((done / total) * 5));
+
   // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "ArrowLeft") { e.preventDefault(); navDay(-1); }
+      if ((e.metaKey || e.ctrlKey) && e.key === "ArrowLeft")  { e.preventDefault(); navDay(-1); }
       if ((e.metaKey || e.ctrlKey) && e.key === "ArrowRight") { e.preventDefault(); navDay(1); }
     };
     window.addEventListener("keydown", handler);
@@ -57,10 +62,35 @@ export function Header() {
         <p style={{ margin: 0, fontSize: 12, fontFamily: "'Poppins', sans-serif", color: "#6B6A65", letterSpacing: "0.1em", textTransform: "uppercase" }}>
           {formatDateLabel(currentDate)}
         </p>
-        <h1 suppressHydrationWarning style={{ margin: "8px 0 0", fontSize: 28, fontWeight: 500, letterSpacing: "-0.02em", color: "#E8E6DF", lineHeight: 1.2 }}>
+        <h1 suppressHydrationWarning style={{ margin: "8px 0 10px", fontSize: 28, fontWeight: 500, letterSpacing: "-0.02em", color: "#E8E6DF", lineHeight: 1.2 }}>
           {greeting}
         </h1>
+
+        {/* HP bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10, fontFamily: "'Poppins', sans-serif", color: "#3A3A36", letterSpacing: "0.08em", textTransform: "uppercase", marginRight: 2 }}>
+            HP
+          </span>
+          {[1, 2, 3, 4, 5].map((pip) => (
+            <div
+              key={pip}
+              className="hp-pip"
+              style={{
+                width: 20,
+                height: 6,
+                borderRadius: 2,
+                background: pip <= hp ? "#E8423F" : "#1E1E1C",
+                border: `1px solid ${pip <= hp ? "#E8423F66" : "#2A2A28"}`,
+                boxShadow: pip <= hp ? "0 0 6px #E8423F44" : "none",
+              }}
+            />
+          ))}
+          <span style={{ fontSize: 10, fontFamily: "'Poppins', sans-serif", color: "#3A3A36", marginLeft: 2 }}>
+            {hp}/5
+          </span>
+        </div>
       </div>
+
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
         <button onClick={() => navDay(-1)} style={navBtn}>←</button>
         <button

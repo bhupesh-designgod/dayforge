@@ -7,6 +7,8 @@ export interface FocusItem {
   text: string;
   tier: "boss" | "elite";
   completed: boolean;
+  scheduledHour?: number;
+  durationMinutes?: number;
   created_at?: string;
 }
 
@@ -19,6 +21,8 @@ export interface TimeBlock {
   title: string;
   tier: Tier;
   sort_order: number;
+  quest_id?: string;
+  completed?: boolean;
   created_at?: string;
 }
 
@@ -48,4 +52,10 @@ export interface DayData {
   focusItems: FocusItem[];
   timeBlocks: TimeBlock[];
   tasks: Task[];
+}
+
+export interface LogEntry {
+  id: string;
+  message: string;
+  timestamp: string;
 }

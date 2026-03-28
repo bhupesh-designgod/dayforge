@@ -3,7 +3,7 @@ import { usePlannerStore } from "@/stores/plannerStore";
 import { TierIcon } from "./TierIcon";
 import { TierBadge } from "./TierBadge";
 import { SectionLabel } from "./SectionLabel";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -32,16 +32,40 @@ const TIER_STYLES = {
   elite: { bg: "#1A1208", border: "#3A2A10", accent: "#D4952B", text: "#B0AEA6" },
 };
 
-function SortableItem({ item, onEdit, onDelete }: {
+const HOURS = Array.from({ length: 16 }, (_, i) => i + 8);
+function formatHour(h: number) {
+  if (h === 12) return "12 PM";
+  return h > 12 ? `${h - 12} PM` : `${h} AM`;
+}
+
+function SortableItem({
+  item,
+  onEdit,
+  onDelete,
+  onToggle,
+}: {
   item: FocusItem;
   onEdit: (id: string, text: string) => void;
   onDelete: (id: string) => void;
+  onToggle: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item.text);
+  const [glowing, setGlowing] = useState(false);
+  const prevCompleted = useRef(item.completed);
   const s = TIER_STYLES[item.tier];
+
+  // Trigger boss glow when item transitions to completed
+  useEffect(() => {
+    if (!prevCompleted.current && item.completed && item.tier === "boss") {
+      setGlowing(true);
+      const t = setTimeout(() => setGlowing(false), 950);
+      return () => clearTimeout(t);
+    }
+    prevCompleted.current = item.completed;
+  }, [item.completed, item.tier]);
 
   const commit = () => {
     if (draft.trim()) onEdit(item.id, draft.trim());
@@ -52,17 +76,18 @@ function SortableItem({ item, onEdit, onDelete }: {
   return (
     <div
       ref={setNodeRef}
+      className={glowing ? "boss-glow" : ""}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0.5 : item.completed ? 0.45 : 1,
         display: "flex",
         alignItems: "center",
         gap: 10,
         padding: "11px 14px",
         background: s.bg,
         border: `1px solid ${s.border}`,
-        borderLeft: `3px solid ${s.accent}`,
+        borderLeft: `3px solid ${item.completed ? s.accent + "55" : s.accent}`,
         borderRadius: "0 6px 6px 0",
       }}
     >
@@ -75,21 +100,53 @@ function SortableItem({ item, onEdit, onDelete }: {
         ⠿
       </span>
 
+      {/* Checkbox */}
+      <span
+        onClick={() => onToggle(item.id)}
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: 3,
+          flexShrink: 0,
+          cursor: "pointer",
+          border: item.completed ? `1.5px solid ${s.accent}55` : `1.5px solid ${s.accent}88`,
+          background: item.completed ? s.accent + "22" : "transparent",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: s.accent,
+          fontSize: 10,
+          transition: "all 0.2s",
+        }}
+      >
+        {item.completed ? "✓" : ""}
+      </span>
+
       <TierIcon tier={item.tier} size={15} />
 
-      {editing ? (
+      {editing && !item.completed ? (
         <input
           autoFocus
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
-          onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(item.text); setEditing(false); } }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") { setDraft(item.text); setEditing(false); }
+          }}
           style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: s.text, fontSize: 14, fontFamily: "inherit" }}
         />
       ) : (
         <span
-          onClick={() => { setDraft(item.text); setEditing(true); }}
-          style={{ flex: 1, fontSize: 14, fontWeight: item.tier === "boss" ? 500 : 400, color: s.text, cursor: "text", textDecoration: item.completed ? "line-through" : "none", opacity: item.completed ? 0.4 : 1 }}
+          onClick={() => { if (!item.completed) { setDraft(item.text); setEditing(true); } }}
+          style={{
+            flex: 1,
+            fontSize: 14,
+            fontWeight: item.tier === "boss" ? 500 : 400,
+            color: s.text,
+            cursor: item.completed ? "default" : "text",
+            textDecoration: item.completed ? "line-through" : "none",
+          }}
         >
           {item.text}
         </span>
@@ -109,9 +166,10 @@ function SortableItem({ item, onEdit, onDelete }: {
 }
 
 export function QuestLine() {
-  const { focusItems, updateFocusItem, setFocusItems } = usePlannerStore();
+  const { focusItems, updateFocusItem, setFocusItems, toggleFocusItem, addFocusItem } = usePlannerStore();
   const [adding, setAdding] = useState<{ rank: 1 | 2 | 3; tier: "boss" | "elite" } | null>(null);
   const [draft, setDraft] = useState("");
+  const [scheduleHour, setScheduleHour] = useState<number | "">("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -138,10 +196,13 @@ export function QuestLine() {
       tier: adding.tier,
       text: draft.trim(),
       completed: false,
+      scheduledHour: scheduleHour !== "" ? scheduleHour : undefined,
+      durationMinutes: scheduleHour !== "" ? 60 : undefined,
     };
-    setFocusItems([...focusItems, newItem].sort((a, b) => a.rank - b.rank));
+    addFocusItem(newItem);
     setAdding(null);
     setDraft("");
+    setScheduleHour("");
   };
 
   const deleteItem = (id: string) => {
@@ -155,12 +216,13 @@ export function QuestLine() {
         <SortableContext items={focusItems.map((f) => f.id)} strategy={verticalListSortingStrategy}>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {/* Filled items */}
-            {focusItems.sort((a, b) => a.rank - b.rank).map((item) => (
+            {[...focusItems].sort((a, b) => a.rank - b.rank).map((item) => (
               <SortableItem
                 key={item.id}
                 item={item}
                 onEdit={(id, text) => updateFocusItem(id, { text })}
                 onDelete={deleteItem}
+                onToggle={toggleFocusItem}
               />
             ))}
 
@@ -173,32 +235,53 @@ export function QuestLine() {
                   key={slot.rank}
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    gap: 10,
+                    flexDirection: "column",
+                    gap: 6,
                     padding: "11px 14px",
                     background: "transparent",
                     border: `1px dashed ${s.border}`,
                     borderLeft: `3px solid ${s.accent}44`,
                     borderRadius: "0 6px 6px 0",
-                    cursor: "text",
+                    cursor: isAdding ? "default" : "text",
                   }}
-                  onClick={() => { if (!isAdding) { setAdding(slot); setDraft(""); } }}
+                  onClick={() => { if (!isAdding) { setAdding(slot); setDraft(""); setScheduleHour(""); } }}
                 >
-                  <TierIcon tier={slot.tier} size={15} />
-                  {isAdding ? (
-                    <input
-                      autoFocus
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onBlur={() => { if (draft.trim()) commitAdd(); else setAdding(null); }}
-                      onKeyDown={(e) => { if (e.key === "Enter") commitAdd(); if (e.key === "Escape") setAdding(null); }}
-                      placeholder={slot.placeholder}
-                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: s.text, fontSize: 14, fontFamily: "inherit" }}
-                    />
-                  ) : (
-                    <span style={{ flex: 1, fontSize: 13, color: "#3A3A36" }}>{slot.placeholder}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <TierIcon tier={slot.tier} size={15} />
+                    {isAdding ? (
+                      <input
+                        autoFocus
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onBlur={() => { if (draft.trim()) commitAdd(); else setAdding(null); }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitAdd();
+                          if (e.key === "Escape") setAdding(null);
+                        }}
+                        placeholder={slot.placeholder}
+                        style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: s.text, fontSize: 14, fontFamily: "inherit" }}
+                      />
+                    ) : (
+                      <span style={{ flex: 1, fontSize: 13, color: "#3A3A36" }}>{slot.placeholder}</span>
+                    )}
+                    <TierBadge tier={slot.tier} />
+                  </div>
+
+                  {/* Optional schedule hour when adding */}
+                  {isAdding && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 25 }}>
+                      <span style={{ fontSize: 11, color: "#4A4A46", fontFamily: "'Poppins', sans-serif" }}>Schedule at</span>
+                      <select
+                        value={scheduleHour}
+                        onChange={(e) => setScheduleHour(e.target.value === "" ? "" : Number(e.target.value))}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        style={{ background: "#0C0C0B", border: "1px solid #1E1E1C", borderRadius: 3, padding: "3px 6px", color: "#6B6A65", fontSize: 11, fontFamily: "'Poppins', sans-serif", outline: "none" }}
+                      >
+                        <option value="">— none —</option>
+                        {HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
+                      </select>
+                    </div>
                   )}
-                  <TierBadge tier={slot.tier} />
                 </div>
               );
             })}

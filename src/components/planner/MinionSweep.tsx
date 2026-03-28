@@ -1,7 +1,6 @@
 "use client";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { TierIcon } from "./TierIcon";
-import { SectionLabel } from "./SectionLabel";
 import { useState } from "react";
 import {
   DndContext,
@@ -41,7 +40,6 @@ function SortableTask({ task, onToggle, onDelete }: {
         padding: "6px 2px",
       }}
     >
-      {/* Drag handle (only for uncompleted) */}
       {!task.completed && (
         <span
           {...attributes}
@@ -51,6 +49,7 @@ function SortableTask({ task, onToggle, onDelete }: {
           ⠿
         </span>
       )}
+      {task.completed && <span style={{ width: 13, flexShrink: 0 }} />}
 
       {/* Checkbox */}
       <span
@@ -60,7 +59,7 @@ function SortableTask({ task, onToggle, onDelete }: {
           border: task.completed ? "1.5px solid #2A2A28" : "1.5px solid #3A3A36",
           background: task.completed ? "#1A1A18" : "transparent",
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#4A4A46", fontSize: 10,
+          color: "#4A4A46", fontSize: 10, transition: "all 0.2s",
         }}
       >
         {task.completed ? "✓" : ""}
@@ -68,11 +67,12 @@ function SortableTask({ task, onToggle, onDelete }: {
 
       <TierIcon tier="minion" size={10} />
 
-      <span style={{
-        flex: 1, fontSize: 13, cursor: "pointer",
-        color: task.completed ? "#3A3A36" : "#B0AEA6",
-        textDecoration: task.completed ? "line-through" : "none",
-      }}
+      <span
+        style={{
+          flex: 1, fontSize: 13, cursor: "pointer",
+          color: task.completed ? "#3A3A36" : "#B0AEA6",
+          textDecoration: task.completed ? "line-through" : "none",
+        }}
         onClick={() => onToggle(task.id)}
       >
         {task.text}
@@ -96,6 +96,7 @@ export function MinionSweep() {
 
   const uncompleted = tasks.filter((t) => !t.completed).sort((a, b) => a.sort_order - b.sort_order);
   const completed = tasks.filter((t) => t.completed);
+  const sweepCount = `${completed.length}/${tasks.length} swept`;
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -114,7 +115,16 @@ export function MinionSweep() {
 
   return (
     <section>
-      <SectionLabel text="Minion sweep" />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+        <p style={{ margin: 0, fontSize: 11, fontFamily: "'Poppins', sans-serif", color: "#4A4A46", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          Minion sweep
+        </p>
+        {tasks.length > 0 && (
+          <span style={{ fontSize: 11, fontFamily: "'Poppins', sans-serif", color: completed.length === tasks.length ? "#4A9E6B" : "#4A4A46", letterSpacing: "0.04em" }}>
+            {sweepCount}
+          </span>
+        )}
+      </div>
       <div style={{ background: "#141413", border: "1px solid #1E1E1C", borderRadius: 6, padding: "14px 16px" }}>
         {tasks.length === 0 && (
           <p style={{ fontSize: 12, color: "#2A2A28", fontFamily: "'Poppins', sans-serif", margin: "0 0 10px", textAlign: "center" }}>

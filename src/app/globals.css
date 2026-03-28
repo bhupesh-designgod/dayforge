@@ -28,3 +28,34 @@ textarea::placeholder {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: #0C0C0B; }
 ::-webkit-scrollbar-thumb { background: #2A2A28; border-radius: 2px; }
+
+/* Boss quest completion glow pulse */
+@keyframes bossGlow {
+  0%   { box-shadow: 0 0 0px 0px rgba(232, 66, 63, 0); }
+  20%  { box-shadow: 0 0 18px 5px rgba(232, 66, 63, 0.55), inset 0 0 12px rgba(232, 66, 63, 0.08); }
+  45%  { box-shadow: 0 0 6px 2px rgba(232, 66, 63, 0.25); }
+  65%  { box-shadow: 0 0 22px 7px rgba(232, 66, 63, 0.45); }
+  100% { box-shadow: 0 0 0px 0px rgba(232, 66, 63, 0); }
+}
+
+.boss-glow {
+  animation: bossGlow 0.9s ease-in-out;
+}
+
+/* Timer round-complete flash */
+@keyframes timerFlash {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.18; }
+  35%  { opacity: 0.05; }
+  55%  { opacity: 0.14; }
+  100% { opacity: 0; }
+}
+
+.timer-flash {
+  animation: timerFlash 0.8s ease-out forwards;
+}
+
+/* HP pip fill transition */
+.hp-pip {
+  transition: background 0.4s ease, border-color 0.4s ease;
+}
