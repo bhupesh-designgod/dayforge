@@ -72,22 +72,9 @@ export const usePlannerStore = create<PlannerState>((set) => ({
     review_carry: "",
     daily_notes: "",
   },
-  focusItems: [
-    { id: "q1", rank: 1, text: "Build auth flow with Supabase", tier: "boss", completed: false },
-    { id: "q2", rank: 2, text: "Complete array puzzle arena", tier: "elite", completed: false },
-    { id: "q3", rank: 3, text: "Git branching practice", tier: "elite", completed: false },
-  ],
-  timeBlocks: [
-    { id: "b1", start_hour: 9, start_minute: 0, duration_minutes: 120, title: "Boss fight — auth flow", tier: "boss", sort_order: 0 },
-    { id: "b2", start_hour: 13, start_minute: 0, duration_minutes: 120, title: "Elite — array puzzles", tier: "elite", sort_order: 1 },
-    { id: "b3", start_hour: 15, start_minute: 0, duration_minutes: 60, title: "Elite — Git practice", tier: "elite", sort_order: 2 },
-    { id: "b4", start_hour: 12, start_minute: 0, duration_minutes: 60, title: "Rest at save point", tier: "minion", sort_order: 3 },
-  ],
-  tasks: [
-    { id: "t1", text: "Push progress to GitHub", completed: false, sort_order: 0 },
-    { id: "t2", text: "Read Claude Code setup docs", completed: false, sort_order: 1 },
-    { id: "t3", text: "Install Node.js & npm", completed: true, sort_order: 2 },
-  ],
+  focusItems: [],
+  timeBlocks: [],
+  tasks: [],
 
   setDay: (day) => set({ day }),
   setFocusItems: (focusItems) => set({ focusItems }),

@@ -112,9 +112,17 @@ export function BattleSchedule() {
                 ) : (
                   <div
                     onClick={() => setAdding({ hour: h })}
-                    style={{ height: "100%", display: "flex", alignItems: "center", paddingLeft: 4, opacity: hoveredHour === h ? 1 : 0, transition: "opacity 0.15s", cursor: "pointer" }}
+                    style={{ height: "100%", display: "flex", alignItems: "center", paddingLeft: 4, cursor: "pointer" }}
                   >
-                    <span style={{ fontSize: 12, color: "#3A3A36" }}>+ add encounter</span>
+                    <span style={{
+                      fontSize: 11,
+                      color: hoveredHour === h ? "#6B6A65" : "#2A2A28",
+                      fontFamily: "'Poppins', sans-serif",
+                      transition: "color 0.15s",
+                      letterSpacing: "0.04em",
+                    }}>
+                      + add encounter
+                    </span>
                   </div>
                 )}
               </div>
